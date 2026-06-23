@@ -2,14 +2,12 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.font_manager as fm
-# Streamlit Cloud에서 사용할 폰트 경로
-font_path = './fonts/NanumBarunGothic.ttf' # GitHub repo 내의 폰트 파일 경로
+font_path = './fonts/NanumBarunGothic.ttf'
 if os.path.exists(font_path):
     fm.fontManager.addfont(font_path)
     plt.rcParams['font.family'] = 'NanumBarunGothic'
 else:
-    # 로컬 테스트 또는 Fallback
-    plt.rcParams['font.family'] = 'Malgun Gothic' if 'Malgun Gothic' in fm.findSystemFonts(fontpaths=None, fontext='ttf') else 'sans-serif'
+     plt.rcParams['font.family'] = 'Malgun Gothic' if 'Malgun Gothic' in fm.findSystemFonts(fontpaths=None, fontext='ttf') else 'sans-serif'
 plt.rcParams['axes.unicode_minus'] = False
 from scipy import stats
 from scipy.fft import rfft, rfftfreq
