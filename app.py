@@ -1,7 +1,17 @@
+%%writefile app.py
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.font_manager as fm
+import matplotlib.pyplot as plt
+from scipy import stats
+from scipy.fft import rfft, rfftfreq
+import os
+import matplotlib.font_manager as fm # 새로 추가되거나 위치 변경될 라인
+
+# --- 전역 변수 및 상수 (Colab 노트북과 동일하게 설정) ---
+FS = 10000  # 샘플링 주파수
+DATASET_NAME = "Case Western Reserve University Bearing Data Center"
+DATASET_URL = "https://www.kaggle.com/datasets/brjapon/cwru-bearing-datasets"
 
 # Streamlit Cloud에서 사용할 폰트 경로
 font_path = './fonts/NanumBarunGothic.ttf' # GitHub repo 내의 폰트 파일 경로
@@ -9,27 +19,10 @@ if os.path.exists(font_path):
     fm.fontManager.addfont(font_path)
     plt.rcParams['font.family'] = 'NanumBarunGothic'
 else:
-    # 로컬 테스트 또는 Fallback
+    # 로컬 테스트 또는 Fallback (Streamlit Cloud 환경에서는 이 부분이 실행되지 않아야 합니다)
+    # Colab 환경에서 폰트가 잘 설정되어 있다면 이 로직은 필요 없을 수 있습니다.
+    # 여기서는 'Malgun Gothic'이 없으면 'sans-serif'로 대체하도록 합니다.
     plt.rcParams['font.family'] = 'Malgun Gothic' if 'Malgun Gothic' in fm.findSystemFonts(fontpaths=None, fontext='ttf') else 'sans-serif'
-plt.rcParams['axes.unicode_minus'] = False
-from scipy import stats
-from scipy.fft import rfft, rfftfreq
-import os
-
-# --- 전역 변수 및 상수 (Colab 노트북과 동일하게 설정) ---
-FS = 10000  # 샘플링 주파수
-DATASET_NAME = "Case Western Reserve University Bearing Data Center"
-DATASET_URL = "https://www.kaggle.com/datasets/brjapon/cwru-bearing-datasets"
-
-# 한글 폰트 설정 (Streamlit Cloud에서는 폰트 설치가 필요할 수 있음)
-# Colab 환경에서 테스트 시에는 별도의 설정 없이 `plt.rcParams['font.family'] = 'NanumBarunGothic'` 사용 가능
-# Streamlit Cloud에서 한글 폰트 적용을 위해서는 'fonts' 디렉토리에 폰트 파일을 넣고 `.streamlit/config.toml`에 설정이 필요합니다.
-# 예시: font_path = './fonts/NanumBarunGothic.ttf'
-
-# matplotlib 한글 폰트 설정 (Streamlit Cloud 환경에서는 별도 처리 필요)
-# 이 코드는 Colab 환경에서 폰트가 잘 설정되어 있다는 가정하에 작성되었습니다.
-# Streamlit Cloud 배포 시에는 폰트 파일과 함께 설정 파일(`config.toml`)을 추가해야 합니다.
-plt.rcParams['font.family'] = 'Malgun Gothic' if 'Malgun Gothic' in plt.matplotlib.font_manager.findSystemFonts(fontpaths=None, fontext='ttf') else 'NanumBarunGothic' # 로컬 테스트용
 plt.rcParams['axes.unicode_minus'] = False # 마이너스 기호 깨짐 방지
 
 
@@ -108,7 +101,7 @@ def load_and_process_data():
     feature_df = pd.read_csv('feature_summary.csv')
     trend_df = pd.read_csv('trend_analysis.csv')
 
-    # MAT_FILES는 app.py가 직접 .mat 파일을 로드하지 않으므로, 
+    # MAT_FILES는 app.py가 직접 .mat 파일을 로드하지 않으므로,
     # 파일 목록 정보만 재구성하여 시각화에 사용합니다.
     # 여기서는 예시로 두 개의 파일을 직접 지정합니다.
     # 실제 환경에서는 Streamlit File Uploader를 통해 .mat 파일을 업로드하도록 구현할 수도 있습니다.
@@ -116,7 +109,7 @@ def load_and_process_data():
         {"label": "Time_Normal_1_098", "path": "Time_Normal_1_098.mat"},
         {"label": "OR007_6_1_136", "path": "OR007_6_1_136.mat"}
     ]
-    
+
     # 여기서는 시각화를 위해 원래 노트북의 `all_analysis_data`와 유사한 구조를 재구성합니다.
     # 실제 신호 데이터는 포함되어 있지 않으므로, 파형/FFT 플롯은 표시되지 않을 수 있습니다.
     # .mat 파일을 직접 업로드 받아 처리하는 로직을 추가해야 파형/FFT를 그릴 수 있습니다.
@@ -150,10 +143,10 @@ def generate_report_content(file_label, current_file_features, current_file_tren
     normal_kurtosis = current_file_features.loc[current_file_features['state']=='normal', 'kurtosis'].iloc[0]
     fault_kurtosis = current_file_features.loc[current_file_features['state']=='fault', 'kurtosis'].iloc[0]
     normal_crest_factor = current_file_features.loc[current_file_features['state']=='normal', 'crest_factor'].iloc[0]
-    fault_crest_factor = current_file_features.loc[current_file_features['state']=='fault', 'crest_crest_factor'].iloc[0]
+    fault_crest_factor = current_file_features.loc[current_file_features['state']=='fault', 'crest_factor'].iloc[0]
 
     # 해당 파일의 정상 신호로 기준값 계산 (diagnosis cell의 로직과 일치)
-    normal_win_for_file = current_file_trend[current_file_trend["state"] == "normal"]
+    normal_win_for_file = current_file_trend[current_file_trend["file"] == file_label][current_file_trend["state"] == "normal"]
     normal_baseline = normal_win_for_file[["rms", "kurtosis", "crest_factor"]].agg(["mean", "std"])
     rms_threshold = normal_baseline.loc["mean", "rms"] + 3 * normal_baseline.loc["std", "rms"]
     kurtosis_threshold = 5.0
