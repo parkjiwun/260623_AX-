@@ -1,0 +1,7 @@
+%%writefile requirements.txt
+streamlit
+pandas
+numpy
+matplotlib
+scipy
+# pyngrok (로컬 테스트용, 배포 시에는 필요 없음)
